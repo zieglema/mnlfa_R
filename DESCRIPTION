@@ -39,5 +39,5 @@ Suggests:
     devtools
 VignetteBuilder: knitr
 Config/testthat/edition: 3
-URL: https://github.com/matthias-ziegler/mnlfa
-BugReports: https://github.com/matthias-ziegler/mnlfa/issues
+URL: https://github.com/zieglema/mnlfa_R
+BugReports: https://github.com/zieglema/mnlfa_R/issues
