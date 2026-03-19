@@ -1,0 +1,43 @@
+Package: mnlfa
+Type: Package
+Title: Moderated Nonlinear Factor Analysis (MNLFA)
+Version: 0.1.0
+Authors@R: person("Matthias", "Ziegler",
+    email = "matthias.ziegler@hu-berlin.de",
+    role  = c("aut", "cre"),
+    comment = c(ORCID = "0000-0002-9373-0365"))
+Description: Implements the stepwise Moderated Nonlinear Factor Analysis
+    (MNLFA) procedure for assessing measurement invariance across observed
+    moderator variables. Supports multidimensional measurement models with
+    multiple latent variables (facets) per domain, which is a key advantage
+    over existing implementations. The package builds moderated SEM syntax,
+    fits models via the OpenMx backend through the mxsem interface, extracts
+    significant moderations, selects anchor items, assembles full domain
+    models, and computes person-specific parameter estimates.
+    References: Bauer (2017) <doi:10.1080/00273171.2016.1256260>;
+    Gottfredson et al. (2019) <doi:10.1037/met0000193>;
+    Kolbe et al. (2022) <doi:10.1080/10705511.2021.1984772>.
+License: GPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Depends:
+    R (>= 4.1.0)
+Imports:
+    OpenMx (>= 2.21.0),
+    mxsem (>= 0.1.0),
+    dplyr (>= 1.1.0),
+    stringr (>= 1.5.0),
+    graphics,
+    stats
+Suggests:
+    ggplot2 (>= 3.4.0),
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    devtools
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+URL: https://github.com/matthias-ziegler/mnlfa
+BugReports: https://github.com/matthias-ziegler/mnlfa/issues
