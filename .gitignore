@@ -1,2 +1,3 @@
 .Rproj.user\n.Rhistory\n.RData\n*.Rcheck/\n*.tar.gz
 .Rproj.user
+.DS_Store
