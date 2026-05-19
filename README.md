@@ -40,6 +40,12 @@ install.packages("mxsem")
 | 13 | `extract_moderation_table()` | Summary table of all moderation effects |
 | 14 | `compute_conditional_parameters()` + `plot_conditional_parameters()` | Interaction plots |
 
+## Data preparation
+
+> **Continuous moderators must be mean-centred or z-standardised before running the pipeline.**
+
+The latent mean intercept is fixed to 0 in all screening models, so moderator = 0 must represent the average person. Z-standardising is recommended (`age_z <- as.numeric(scale(age))`), which also makes effect sizes comparable across moderators. Binary moderators (e.g. sex coded 0/1) do not need centering — the reference group naturally has a latent mean of 0.
+
 ## Usage
 
 See `mnlfa_sim_3factor.R` for a fully annotated simulation script (3 facets × 10 items, 2 moderators), and `mnlfa_worked_example.Rmd` for a narrative worked example with explanations.

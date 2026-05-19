@@ -6,12 +6,14 @@
 # of lines unless stated otherwise).
 # =============================================================================
 
-#' Add latent mean intercept and moderator regressions to model syntax
+#' Add latent mean moderator regressions to model syntax (MIMIC approach)
 #'
-#' Appends a labelled intercept line (`latent ~ m_latent*1`) and one or more
-#' moderator regression lines (`latent ~ m_latent_01*mod1 + ...`) to the
-#' model string.  Any pre-existing mean/intercept lines for the latent variable
-#' are removed first to avoid duplication.
+#' Appends a labelled moderator regression line
+#' (`latent ~ m_latent_01*mod1 + m_latent_02*mod2 + ...`) to the model string.
+#' The baseline mean constraint (typically `LV ~ 0*1`) is preserved as the
+#' reference-point intercept, so the effective latent mean is
+#' `0 + m_latent_01*mod1 + ...` — a MIMIC-style regression with the intercept
+#' anchored to zero.
 #'
 #' @param model_string Character. Lavaan-style model syntax (single string or
 #'   character vector of lines).
@@ -24,12 +26,21 @@
 #'   is via the first loading being fixed to 1; pass
 #'   `scale_loadings = TRUE, scale_latent_variances = FALSE` to [run_mxsem()].
 #'
+#' @note **Moderator centering is required.**  Because the latent mean intercept
+#'   is fixed to 0 (inherited from the baseline `LV ~ 0*1`), the reference
+#'   point is moderator = 0.  For this to be meaningful, continuous moderators
+#'   must be mean-centred or z-standardised before running the pipeline
+#'   (e.g. `age_z <- scale(age)`).  Binary moderators (e.g. sex coded 0/1)
+#'   work without centering: the reference group (0) has latent mean 0 by
+#'   constraint, and the slope gives the group difference.  This is consistent
+#'   with standard MNLFA practice (Bauer, 2017).
+#'
 #' @return A single character string (lines joined by `\n`).
 #'
 #' @examples
 #' m <- "F =~ x1 + x2 + x3\nF ~~ 1*F\nF ~ 0*1"
-#' add_latent_mean_regression(m, c("age", "sex"))
-#' add_latent_mean_regression(m, c("age", "sex"), identification = "loading")
+#' add_latent_mean_regression(m, c("age_z", "sex"))
+#' add_latent_mean_regression(m, c("age_z", "sex"), identification = "loading")
 #'
 #' @export
 add_latent_mean_regression <- function(model_string, moderators,
@@ -60,14 +71,17 @@ add_latent_mean_regression <- function(model_string, moderators,
       !grepl(paste0("^", latent, "\\s*~~\\s*1\\*", latent), model_lines)]
   }
 
-  intercept_label <- paste0("m_", latent)
-  intercept_line  <- paste0(latent, " ~ ", intercept_label, "*1")
+  preds <- paste0("m_", latent, "_", sprintf("%02d", seq_along(moderators)),
+                  "*", moderators)
 
-  preds           <- paste0("m_", latent, "_", sprintf("%02d", seq_along(moderators)),
-                            "*", moderators)
+  # Only add the regression slopes.  The baseline mean constraint (e.g.
+  # FLC ~ 0*1) is preserved as the reference-point intercept.  Adding a
+  # separate free intercept (m_FLC*1) is unnecessary for screening and
+  # causes identification problems in bifactor / multi-latent models where
+  # two latent variables share items.
   regression_line <- paste0(latent, " ~ ", paste(preds, collapse = " + "))
 
-  updated_lines <- c(model_lines, intercept_line, regression_line)
+  updated_lines <- c(model_lines, regression_line)
   return(paste(updated_lines, collapse = "\n"))
 }
 
