@@ -20,6 +20,23 @@
 #' identification is achieved by fixing the first anchor item's loading to 1
 #' (handled automatically by [add_all_moderation_single_facet()]).
 #'
+#' **Always verify model identification after fitting.**  Even though scale
+#' identification is handled automatically via anchor loadings, complex domain
+#' models with many facets, covariance moderation, or acquiescence factors can
+#' still encounter convergence problems or empirical under-identification.
+#' After fitting with [run_mxsem()], always check:
+#' \itemize{
+#'   \item OpenMx status code: `summary(fit)$statusCode` should be `"OK"`.
+#'   \item Standard errors: values > 10 indicate an unidentified or empirically
+#'     under-identified parameter.
+#'   \item Heywood cases: negative residual variances or latent variances < 0
+#'     signal a degenerate solution.
+#'   \item Loading directions: with anchor-based identification the sign is
+#'     fixed for content factors (the anchor loading is constrained to +1), so
+#'     sign flipping is not expected here — but verify that most loadings are
+#'     in the expected positive direction.
+#' }
+#'
 #' **Important**: if a facet has *no* significant moderations in `all_sig_mods`,
 #' [add_all_moderation_single_facet()] returns the original `model_string`
 #' unchanged (including its `LV ~~ 1*LV` baseline variance constraint).  This

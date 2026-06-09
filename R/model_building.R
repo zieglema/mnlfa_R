@@ -35,6 +35,47 @@
 #'   constraint, and the slope gives the group difference.  This is consistent
 #'   with standard MNLFA practice (Bauer, 2017).
 #'
+#' @note **Always verify model identification — and how to fix it for
+#'   multi-factor models.**  This function operates on the first `=~` line only
+#'   and does not add or check identification constraints for any additional
+#'   latent variables.  When `identification = "loading"` is used with a
+#'   multi-factor model (e.g. a bifactor with a general factor *G* and a
+#'   specific factor *S*), [run_mxsem()] fixes only the **first** loading in
+#'   the entire model string.  All other latent variables remain unconstrained,
+#'   producing inflated standard errors or non-admissible solutions.
+#'
+#'   **Two safe remedies:**
+#'
+#'   1. **Preferred — variance identification for all factors.**  Use
+#'      `identification = "variance"` and ensure *every* latent variable in the
+#'      baseline already has `LV ~~ 1*LV` before calling this function.  Then
+#'      pass the result to [run_mxsem()] with `scale_latent_variances = TRUE`,
+#'      which fixes all variances to 1 globally.  Example baseline:
+#'      ```
+#'      G =~ i1 + i2 + i3 + i4 + i5 + i6
+#'      S =~ i1 + i2 + i3
+#'      G ~~ 1*G
+#'      S ~~ 1*S
+#'      G ~~ 0*S
+#'      G ~ 0*1
+#'      S ~ 0*1
+#'      ```
+#'
+#'   2. **Loading identification — manual marker per extra factor.**  Use
+#'      `identification = "loading"` but write a `1*` marker for the first item
+#'      of *each additional factor* directly in the baseline string.  [run_mxsem()]
+#'      handles *G*; you handle *S* manually.  Example baseline:
+#'      ```
+#'      G =~ i1 + i2 + i3 + i4 + i5 + i6
+#'      S =~ 1*i1 + i2 + i3
+#'      G ~ 0*1
+#'      S ~ 0*1
+#'      ```
+#'
+#'   After fitting, always check: `summary(fit)$statusCode` (should be
+#'   `"OK"`), standard errors > 10 (unidentified parameter), and negative
+#'   residual variances (Heywood case).  Single-factor models are unaffected.
+#'
 #' @return A single character string (lines joined by `\n`).
 #'
 #' @examples
@@ -142,6 +183,16 @@ add_latent_variance_moderation <- function(model_string, moderators,
 #'   should be passed to [run_mxsem()] with `scale_loadings = FALSE` and
 #'   `scale_latent_variances = TRUE` (or the variance constraint already
 #'   present in the model string is sufficient).
+#'
+#'   **Sign indeterminacy warning:** fixing the latent variance to 1 identifies
+#'   the *scale* of the latent variable but not its *sign*.  OpenMx is free to
+#'   reflect the entire factor — multiplying all loadings by −1 — and obtain an
+#'   identical likelihood.  This does **not** affect fit statistics or p-values,
+#'   so DIF screening results are unaffected.  However, when you inspect or plot
+#'   loading estimates, the direction may be reversed relative to your
+#'   expectation.  After fitting, verify that the majority of loadings are
+#'   positive; if not, the factor has been reflected and you may multiply
+#'   all loading estimates and the latent mean by −1 for reporting.
 #'
 #' * **`scale_loadings = TRUE`:** The latent variance is free; scale
 #'   identification relies on fixing the **first loading in the `=~` line**
@@ -288,13 +339,31 @@ add_covariance_moderation <- function(model_string, moderators) {
     lv2       <- trimws(rhs_parts[2])
 
     for (lv in c(lv1, lv2)) {
-      var_label       <- paste0("var_", lv)
-      already_defined <- any(grepl(paste0("^", lv, "\\s*~~\\s*", var_label, "\\*", lv),
+      var_label <- paste0("var_", lv)
+      if (var_label %in% added_variances) next
+
+      # Check what kind of variance line, if any, already exists for this LV.
+      # The original check only looked for "LV ~~ var_LV*LV", missing the case
+      # where the baseline still carries "LV ~~ 1*LV" (facets with no significant
+      # variance moderation).  If that hard-coded constraint is left alongside the
+      # new free "LV ~~ var_LV*LV" line that the covariance formula requires,
+      # OpenMx sees two simultaneous variance specifications and the model is
+      # mis-specified.  We therefore replace any existing "~~" line for this LV
+      # with the labelled free version.
+      already_labeled <- any(grepl(paste0("^", lv, "\\s*~~\\s*", var_label, "\\*", lv),
                                    model_lines))
-      if (!already_defined && !(var_label %in% added_variances)) {
-        cov_mod_lines   <- c(cov_mod_lines, paste0(lv, " ~~ ", var_label, "*", lv))
-        added_variances <- c(added_variances, var_label)
+      any_var_line    <- grepl(paste0("^", lv, "\\s*~~\\s*"), model_lines)
+
+      if (already_labeled) {
+        # Already the correct form — nothing to do.
+      } else if (any(any_var_line)) {
+        # Replace whatever is there (e.g. LV ~~ 1*LV) with the labelled version.
+        model_lines[any_var_line] <- paste0(lv, " ~~ ", var_label, "*", lv)
+      } else {
+        # No variance line at all — append one.
+        cov_mod_lines <- c(cov_mod_lines, paste0(lv, " ~~ ", var_label, "*", lv))
       }
+      added_variances <- c(added_variances, var_label)
     }
 
     rho_label <- paste0("rho_", cov_name)
